@@ -1,0 +1,12 @@
+{
+  "name": "GitHub Productivity Metrics",
+  "version": "1.0.0",
+  "description": "Generates developer productivity metrics dashboard: commits, LOC, PRs, issues, cycle time, and code review time from GitHub",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python scripts/github-productivity-metrics.py"
+  }
+}

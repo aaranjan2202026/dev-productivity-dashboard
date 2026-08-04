@@ -1,0 +1,12 @@
+{
+  "name": "Daily AWS Cost Report",
+  "version": "1.0.0",
+  "description": "Generates an HTML report of AWS service usage and costs, sends email to ashita.avadhani@capgemini.com, and posts summary to Microsoft Teams",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python scripts/aws-daily-cost-report.py"
+  }
+}

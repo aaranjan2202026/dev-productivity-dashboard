@@ -1,0 +1,39 @@
+# Reports (generated)
+reports/
+
+# Node modules
+node_modules/
+kiro-dashboard/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Environment & secrets
+.env
+*.env
+env_vars.env
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+app.log
+
+# IDE
+.vscode/
+.idea/
+
+# Cloned reference repos (not needed in template)
+kiro-bestpractices/
+productivity-metrics/
+
+# Config with user-specific data
+config/metrics-targets.json

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiro Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>Kiro Dashboard</h1>
+      <span class="subtitle">Agent Monitoring</span>
+    </div>
+    <div class="header-right">
+      <span class="refresh-indicator" id="refresh-indicator" aria-live="polite" aria-label="Last refreshed">--</span>
+      <button id="refresh-btn" aria-label="Refresh now" title="Refresh now">&#x21bb;</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Agent Status Panel -->
+    <section class="panel" aria-labelledby="agents-heading">
+      <h2 id="agents-heading">Agent Status</h2>
+      <div class="panel-content" id="agents-panel">
+        <div class="agent-card" id="kiro-card">
+          <div class="agent-indicator" id="kiro-indicator" aria-label="Kiro status"></div>
+          <div class="agent-info">
+            <strong>Kiro</strong>
+            <span class="agent-status" id="kiro-status">checking...</span>
+            <span class="agent-lastseen" id="kiro-lastseen"></span>
+          </div>
+        </div>
+        <div class="agent-card" id="groundcrew-card">
+          <div class="agent-indicator" id="groundcrew-indicator" aria-label="Groundcrew status"></div>
+          <div class="agent-info">
+            <strong>Groundcrew</strong>
+            <span class="agent-status" id="groundcrew-status">checking...</span>
+            <span class="agent-lastseen" id="groundcrew-lastseen"></span>
+          </div>
+        </div>
+        <div class="agent-card" id="devserver-card">
+          <div class="agent-indicator" id="devserver-indicator" aria-label="Dev server status"></div>
+          <div class="agent-info">
+            <strong>Dev Server</strong>
+            <span class="agent-status" id="devserver-status">checking...</span>
+            <span class="agent-lastseen" id="devserver-port"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Token Usage Panel -->
+    <section class="panel" aria-labelledby="tokens-heading">
+      <h2 id="tokens-heading">Token Usage</h2>
+      <div class="panel-content" id="tokens-panel">
+        <div class="token-bars" id="token-bars">
+          <p class="empty-state">No token data yet</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Context Usage Panel -->
+    <section class="panel" aria-labelledby="context-heading">
+      <h2 id="context-heading">Context Usage</h2>
+      <div class="panel-content" id="context-panel">
+        <div class="context-list" id="context-list">
+          <p class="empty-state">No active sessions</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Command Queue Panel -->
+    <section class="panel" aria-labelledby="commands-heading">
+      <h2 id="commands-heading">Command Queue</h2>
+      <div class="panel-content" id="commands-panel">
+        <div class="command-list" id="command-list">
+          <p class="empty-state">No pending commands</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Git Activity Panel -->
+    <section class="panel panel-wide" aria-labelledby="git-heading">
+      <h2 id="git-heading">Recent Git Activity</h2>
+      <div class="panel-content" id="git-panel">
+        <div class="git-timeline" id="git-timeline">
+          <p class="empty-state">No git activity found</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="config-info">Loading config...</span>
+  </footer>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
