@@ -10,8 +10,8 @@ const PORT = process.env.DASHBOARD_PORT || 3001;
 
 // Config - paths to monitor (configurable via env or config file)
 const CONFIG = {
-  careerToolkitPath: process.env.CAREER_TOOLKIT_PATH || path.resolve(__dirname, '../career-toolkit'),
-  groundcrewPath: process.env.GROUNDCREW_PATH || path.resolve(__dirname, '../groundcrew'),
+  careerToolkitPath: process.env.CAREER_TOOLKIT_PATH || path.resolve(__dirname, '..'),
+  groundcrewPath: process.env.GROUNDCREW_PATH || path.resolve(__dirname, '..'),
   devServerPort: parseInt(process.env.DEV_SERVER_PORT || '3000'),
   agentCommandsFile: '.kiro/agent-commands.json',
   agentResultsFile: '.kiro/agent-results.json',
@@ -77,8 +77,13 @@ function getGitLog(repoPath, limit = 20) {
     if (!fs.existsSync(repoPath)) {
       return [];
     }
+    const gitDir = path.join(repoPath, '.git');
+    if (!fs.existsSync(gitDir)) {
+      return [];
+    }
+    // Use delimiter approach for Windows compatibility
     const log = execSync(
-      `git -C "${repoPath}" log --oneline --format='{"hash":"%h","message":"%s","author":"%an","date":"%ci","type":"commit"}' -n ${limit}`,
+      `git -C "${repoPath}" log --format="%h|||%s|||%an|||%ci" -n ${limit}`,
       { encoding: 'utf-8', timeout: 5000 }
     );
     return log
@@ -86,11 +91,17 @@ function getGitLog(repoPath, limit = 20) {
       .split('\n')
       .filter(Boolean)
       .map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
+        const parts = line.split('|||');
+        if (parts.length >= 4) {
+          return {
+            hash: parts[0],
+            message: parts[1],
+            author: parts[2],
+            date: parts[3],
+            type: 'commit',
+          };
         }
+        return null;
       })
       .filter(Boolean);
   } catch (e) {
@@ -100,13 +111,26 @@ function getGitLog(repoPath, limit = 20) {
 
 function getGroundcrewStatus() {
   try {
-    // Check if groundcrew process is running
-    const result = execSync('pgrep -f "groundcrew" 2>/dev/null || echo ""', {
-      encoding: 'utf-8',
-      timeout: 3000,
-    }).trim();
-    if (result) {
-      return { status: 'online', pid: result.split('\n')[0] };
+    // Check if groundcrew process is running (Windows compatible)
+    let result = '';
+    try {
+      result = execSync('tasklist /FI "IMAGENAME eq groundcrew*" /FO CSV /NH 2>nul', {
+        encoding: 'utf-8',
+        timeout: 3000,
+      }).trim();
+    } catch (e) {
+      // tasklist may fail, try alternative
+      try {
+        result = execSync('pgrep -f "groundcrew" 2>/dev/null || echo ""', {
+          encoding: 'utf-8',
+          timeout: 3000,
+        }).trim();
+      } catch (e2) {
+        result = '';
+      }
+    }
+    if (result && !result.includes('No tasks') && !result.includes('INFO:')) {
+      return { status: 'online', pid: result.split(',')[1] || '' };
     }
     // Fallback: check if groundcrew left a recent heartbeat/log
     const logPath = path.join(CONFIG.groundcrewPath, 'groundcrew.log');
@@ -115,7 +139,6 @@ function getGroundcrewStatus() {
       const lastModified = new Date(stat.mtime);
       const now = new Date();
       const diffMs = now - lastModified;
-      // If log was modified in last 30 seconds, consider it active
       if (diffMs < 30000) {
         return { status: 'online', lastSeen: lastModified.toISOString() };
       }
@@ -129,34 +152,50 @@ function getGroundcrewStatus() {
 
 function getKiroStatus() {
   try {
-    // Check for recent Kiro activity via git commits or agent-commands
+    // Check for recent Kiro activity via .kiro directory or git commits
+    const kiroDir = path.join(CONFIG.careerToolkitPath, '.kiro');
+    if (fs.existsSync(kiroDir)) {
+      const stat = fs.statSync(kiroDir);
+      const lastModified = new Date(stat.mtime);
+      const now = new Date();
+      const diffMs = now - lastModified;
+      if (diffMs < 60000) {
+        return { status: 'online', lastSeen: lastModified.toISOString() };
+      }
+    }
+
+    // Check for agent-commands file
     const commandsPath = path.join(CONFIG.careerToolkitPath, CONFIG.agentCommandsFile);
     if (fs.existsSync(commandsPath)) {
       const stat = fs.statSync(commandsPath);
       const lastModified = new Date(stat.mtime);
       const now = new Date();
       const diffMs = now - lastModified;
-      // If commands file was modified in last 60 seconds, Kiro is likely active
       if (diffMs < 60000) {
         return { status: 'online', lastSeen: lastModified.toISOString() };
       }
       return { status: 'idle', lastSeen: lastModified.toISOString() };
     }
-    // Check recent git pushes from Kiro
-    const log = execSync(
-      `git -C "${CONFIG.careerToolkitPath}" log --oneline --author="kiro" -n 1 --format="%ci" 2>/dev/null || echo ""`,
-      { encoding: 'utf-8', timeout: 5000 }
-    ).trim();
-    if (log) {
-      const lastCommit = new Date(log);
-      const now = new Date();
-      const diffMs = now - lastCommit;
-      if (diffMs < 300000) {
-        // 5 minutes
-        return { status: 'online', lastSeen: lastCommit.toISOString() };
+
+    // Check recent git commits
+    try {
+      const log = execSync(
+        `git -C "${CONFIG.careerToolkitPath}" log --oneline -n 1 --format="%ci"`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      if (log) {
+        const lastCommit = new Date(log);
+        const now = new Date();
+        const diffMs = now - lastCommit;
+        if (diffMs < 300000) {
+          return { status: 'online', lastSeen: lastCommit.toISOString() };
+        }
+        return { status: 'idle', lastSeen: lastCommit.toISOString() };
       }
-      return { status: 'idle', lastSeen: lastCommit.toISOString() };
+    } catch (e) {
+      // git command failed
     }
+
     return { status: 'unknown', lastSeen: null };
   } catch (e) {
     return { status: 'unknown', error: e.message };
@@ -218,20 +257,16 @@ app.get('/api/status', async (req, res) => {
 app.get('/api/git-activity', (req, res) => {
   try {
     const limit = parseInt(req.query.limit || '20');
-    const careerToolkitLog = getGitLog(CONFIG.careerToolkitPath, limit);
-    const groundcrewLog = getGitLog(CONFIG.groundcrewPath, limit);
+    const workspaceLog = getGitLog(CONFIG.careerToolkitPath, limit);
 
-    // Merge and sort by date
     const allActivity = [
-      ...careerToolkitLog.map((entry) => ({ ...entry, repo: 'career-toolkit' })),
-      ...groundcrewLog.map((entry) => ({ ...entry, repo: 'groundcrew' })),
+      ...workspaceLog.map((entry) => ({ ...entry, repo: 'workspace' })),
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.json({
       activity: allActivity.slice(0, limit),
       repos: {
-        careerToolkit: { path: CONFIG.careerToolkitPath, exists: fs.existsSync(CONFIG.careerToolkitPath) },
-        groundcrew: { path: CONFIG.groundcrewPath, exists: fs.existsSync(CONFIG.groundcrewPath) },
+        workspace: { path: CONFIG.careerToolkitPath, exists: fs.existsSync(CONFIG.careerToolkitPath) },
       },
     });
   } catch (e) {
