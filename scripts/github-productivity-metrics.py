@@ -42,8 +42,7 @@ def collect_metrics(username: str, repository: str, weeks_back: int = DEFAULT_WE
     g = get_github_client()
 
     try:
-        user = g.get_user(username)
-        repo = user.get_repo(repository)
+        repo = g.get_repo(f"{username}/{repository}")
     except Exception as e:
         print(f"  ERROR: {e}")
         return {"error": str(e), "username": username, "repository": repository}
@@ -56,10 +55,10 @@ def collect_metrics(username: str, repository: str, weeks_back: int = DEFAULT_WE
         "generated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
     }
 
-    # 1. Commits
+    # 1. Commits (all authors in the repo for the period)
     print("    - Counting commits...")
     try:
-        commits = repo.get_commits(since=start_date, until=end_date, author=username)
+        commits = repo.get_commits(since=start_date, until=end_date)
         metrics["commits"] = commits.totalCount
     except Exception as e:
         print(f"      Error: {e}")
@@ -70,7 +69,7 @@ def collect_metrics(username: str, repository: str, weeks_back: int = DEFAULT_WE
     try:
         lines_added = 0
         lines_deleted = 0
-        commit_list = repo.get_commits(since=start_date, until=end_date, author=username)
+        commit_list = repo.get_commits(since=start_date, until=end_date)
         count = 0
         for commit in commit_list:
             if count >= 50:  # Limit to avoid rate limits
@@ -98,11 +97,10 @@ def collect_metrics(username: str, repository: str, weeks_back: int = DEFAULT_WE
         for pr in all_prs:
             if pr.created_at.replace(tzinfo=pytz.UTC) < start_date:
                 break
-            if pr.user.login == username:
-                if pr.merged:
-                    merged_prs += 1
-                elif pr.state == "open":
-                    open_prs += 1
+            if pr.merged:
+                merged_prs += 1
+            elif pr.state == "open":
+                open_prs += 1
         metrics["open_prs"] = open_prs
         metrics["merged_prs"] = merged_prs
     except Exception as e:
@@ -113,7 +111,7 @@ def collect_metrics(username: str, repository: str, weeks_back: int = DEFAULT_WE
     # 4. Issues
     print("    - Counting issues...")
     try:
-        issues = repo.get_issues(state="all", since=start_date, creator=username)
+        issues = repo.get_issues(state="all", since=start_date)
         open_issues = 0
         closed_issues = 0
         for issue in issues:
@@ -528,7 +526,7 @@ def main() -> None:
     elif not targets:
         # No config, no args — use defaults
         targets = [
-            {"username": "aaranjan2202026", "repository": "java-spring-boot-ecs-fargate-redis-caching"},
+            {"username": "aaranjan2202026", "repository": "dev-productivity-dashboard"},
         ]
 
     # Check for env override

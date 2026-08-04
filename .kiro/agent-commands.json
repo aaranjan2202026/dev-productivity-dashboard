@@ -1,0 +1,18 @@
+{
+  "commands": [
+    {
+      "id": "cmd-001",
+      "type": "run-metrics",
+      "description": "Generate GitHub productivity metrics report",
+      "status": "pending",
+      "createdAt": "2026-08-04T12:00:00Z"
+    },
+    {
+      "id": "cmd-002",
+      "type": "cost-report",
+      "description": "Generate AWS daily cost report and send to Teams",
+      "status": "pending",
+      "createdAt": "2026-08-04T12:05:00Z"
+    }
+  ]
+}

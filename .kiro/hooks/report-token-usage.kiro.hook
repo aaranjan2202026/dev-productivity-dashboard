@@ -1,0 +1,12 @@
+{
+  "name": "Report Token Usage to Dashboard",
+  "version": "1.0.0",
+  "description": "Reports estimated token usage to the Kiro Dashboard after each agent interaction",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl -s -X POST http://localhost:3001/api/tokens -H \"Content-Type: application/json\" -d \"{\\\"agent\\\":\\\"kiro\\\",\\\"tokens\\\":1000}\" >nul 2>&1"
+  }
+}
