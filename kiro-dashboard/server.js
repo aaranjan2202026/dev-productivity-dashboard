@@ -376,6 +376,37 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// GET /api/productivity - Return latest productivity metrics from reports
+app.get('/api/productivity', (req, res) => {
+  try {
+    const reportsDir = path.resolve(__dirname, '../reports');
+    if (!fs.existsSync(reportsDir)) {
+      return res.json({ metrics: [], message: 'No reports directory found' });
+    }
+    // Find the latest JSON metrics file
+    const files = fs.readdirSync(reportsDir)
+      .filter(f => f.startsWith('productivity-metrics-') && f.endsWith('.json'))
+      .sort()
+      .reverse();
+
+    if (files.length === 0) {
+      return res.json({ metrics: [], message: 'No metrics reports found. Run: python scripts/github-productivity-metrics.py' });
+    }
+
+    const latestFile = path.join(reportsDir, files[0]);
+    const content = fs.readFileSync(latestFile, 'utf-8');
+    const metrics = JSON.parse(content);
+
+    res.json({
+      metrics,
+      file: files[0],
+      generatedAt: metrics[0] ? metrics[0].generated_at : null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`\n  ┌─────────────────────────────────────┐`);

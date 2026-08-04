@@ -159,3 +159,59 @@ footer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); text-alig
   main { grid-template-columns: 1fr; padding: 1rem; }
   header { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
 }
+
+
+/* Productivity Metrics Panel */
+.productivity-card {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.productivity-card h3 {
+  color: #58a6ff;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.productivity-period {
+  color: #8b949e;
+  font-size: 12px;
+}
+.productivity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.productivity-stat {
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.stat-value {
+  display: block;
+  font-size: 22px;
+  font-weight: bold;
+  color: #58a6ff;
+  margin-bottom: 2px;
+}
+.stat-label {
+  display: block;
+  font-size: 10px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.stat-detail {
+  display: block;
+  font-size: 10px;
+  color: #484f58;
+  margin-top: 2px;
+}
+@media (max-width: 768px) {
+  .productivity-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

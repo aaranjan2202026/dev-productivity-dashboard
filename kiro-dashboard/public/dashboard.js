@@ -130,6 +130,41 @@ function renderGitActivity(data) {
 }
 
 
+function renderProductivity(data) {
+  const el = document.getElementById('productivity-metrics');
+  if (!el) return;
+  if (!data || !data.metrics || data.metrics.length === 0) {
+    el.innerHTML = '<p class="empty-state">No metrics data. Run: python scripts/github-productivity-metrics.py</p>';
+    return;
+  }
+  let html = '';
+  for (const m of data.metrics) {
+    if (m.error) {
+      html += `<div class="productivity-card"><h3>${m.username}/${m.repository}</h3><p class="empty-state">Error: ${m.error}</p></div>`;
+      continue;
+    }
+    html += `
+      <div class="productivity-card">
+        <h3>&#128202; ${m.username} / ${m.repository}</h3>
+        <span class="productivity-period">${m.period_start} &rarr; ${m.period_end}</span>
+        <div class="productivity-grid">
+          <div class="productivity-stat"><span class="stat-value">${m.commits}</span><span class="stat-label">Commits</span></div>
+          <div class="productivity-stat"><span class="stat-value">${fmt(m.lines_of_code)}</span><span class="stat-label">Lines of Code</span><span class="stat-detail">+${fmt(m.lines_added)} / -${fmt(m.lines_deleted)}</span></div>
+          <div class="productivity-stat"><span class="stat-value">${m.open_prs}</span><span class="stat-label">Open PRs</span></div>
+          <div class="productivity-stat"><span class="stat-value">${m.merged_prs}</span><span class="stat-label">Merged PRs</span></div>
+          <div class="productivity-stat"><span class="stat-value">${m.open_issues}</span><span class="stat-label">Open Issues</span></div>
+          <div class="productivity-stat"><span class="stat-value">${m.closed_issues}</span><span class="stat-label">Closed Issues</span></div>
+          <div class="productivity-stat"><span class="stat-value">${m.issue_cycle_time_days}d</span><span class="stat-label">Cycle Time</span></div>
+          <div class="productivity-stat"><span class="stat-value">${m.code_review_time_hours}h</span><span class="stat-label">Review Time</span></div>
+        </div>
+      </div>`;
+  }
+  if (data.generatedAt) {
+    html += `<p class="empty-state" style="margin-top:10px;font-size:11px;">Last generated: ${data.generatedAt}</p>`;
+  }
+  el.innerHTML = html;
+}
+
 function renderConfig(data) {
   if (!data) return;
   document.getElementById('config-info').textContent = `Monitoring: ${data.careerToolkitPath} | Dev server: :${data.devServerPort} | Dashboard: :${data.dashboardPort}`;
@@ -137,13 +172,14 @@ function renderConfig(data) {
 
 async function refreshAll() {
   document.getElementById('refresh-indicator').textContent = 'refreshing...';
-  const [status, tokens, context, commands, git, config] = await Promise.all([
+  const [status, tokens, context, commands, git, config, productivity] = await Promise.all([
     fetchJSON('/api/status'),
     fetchJSON('/api/tokens'),
     fetchJSON('/api/context'),
     fetchJSON('/api/commands'),
     fetchJSON('/api/git-activity'),
     fetchJSON('/api/config'),
+    fetchJSON('/api/productivity'),
   ]);
   renderAgentStatus(status);
   renderTokenUsage(tokens);
@@ -151,6 +187,7 @@ async function refreshAll() {
   renderCommands(commands);
   renderGitActivity(git);
   renderConfig(config);
+  renderProductivity(productivity);
   document.getElementById('refresh-indicator').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
