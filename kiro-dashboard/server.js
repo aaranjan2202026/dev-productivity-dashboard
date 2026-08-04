@@ -579,6 +579,162 @@ app.get('/api/genai-activity', (req, res) => {
   }
 });
 
+// GET /api/genai-cicd - Derive CI/CD & Operations metrics from actual tracking data
+app.get('/api/genai-cicd', (req, res) => {
+  try {
+    const data = loadData();
+    const workspacePath = CONFIG.careerToolkitPath;
+
+    // 1. CI/CD Automation — derive from pipeline/IaC/script files created by Kiro
+    let cicdData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      const allFiles = execSync(
+        `git -C "${workspacePath}" log --diff-filter=A --name-only --since="4 weeks ago" --format=""`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const newFiles = allFiles ? allFiles.split('\n').filter(Boolean) : [];
+
+      // CI/CD related files
+      const cicdPatterns = /\.(yml|yaml|tf|cdk|dockerfile|sh|ps1|pipeline|workflow)/i;
+      const cicdPathPatterns = /(\.github|\.kiro|scripts|infra|deploy|pipeline|ci|cd|terraform|cloudformation)/i;
+      const cicdFiles = newFiles.filter(f => cicdPatterns.test(f) || cicdPathPatterns.test(f));
+      const hookFiles = newFiles.filter(f => f.includes('.kiro/hooks'));
+
+      const totalCicd = cicdFiles.length + hookFiles.length;
+      cicdData.baseline = '0 pipelines';
+      cicdData.afterGenAI = `${totalCicd} configs generated`;
+
+      if (totalCicd > 15) cicdData.score = 3;
+      else if (totalCicd > 8) cicdData.score = 2;
+      else if (totalCicd > 0) cicdData.score = 1;
+    } catch (e) { /* git not available */ }
+
+    // 2. Deployment Readiness Time — derive from time between first commit and last commit per day
+    let deployReadyData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      const commitDates = execSync(
+        `git -C "${workspacePath}" log --format="%ci" --since="2 weeks ago"`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const dates = commitDates ? commitDates.split('\n').filter(Boolean) : [];
+
+      if (dates.length >= 2) {
+        const first = new Date(dates[dates.length - 1]);
+        const last = new Date(dates[0]);
+        const totalHours = (last - first) / (1000 * 60 * 60);
+        const commitsPerHour = dates.length / Math.max(totalHours, 1);
+
+        // Faster commit velocity = faster deployment readiness
+        deployReadyData.baseline = 'Manual build/test';
+        deployReadyData.afterGenAI = `${Math.max(totalHours / dates.length, 0.1).toFixed(1)}h per deploy`;
+        deployReadyData.score = commitsPerHour > 2 ? 3 : commitsPerHour > 0.5 ? 2 : 1;
+      } else if (dates.length > 0) {
+        deployReadyData.baseline = 'N/A';
+        deployReadyData.afterGenAI = 'Active';
+        deployReadyData.score = 1;
+      }
+    } catch (e) { /* git not available */ }
+
+    // 3. Incident Resolution Support — derive from fix commits and Kiro sessions
+    let incidentData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      const fixCommits = execSync(
+        `git -C "${workspacePath}" log --oneline --since="4 weeks ago" --grep="fix"`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const fixes = fixCommits ? fixCommits.split('\n').filter(Boolean) : [];
+
+      const kiroTokens = (data.tokenUsage && data.tokenUsage.kiro) || 0;
+      const sessionCount = (data.sessions || []).length;
+
+      // AI-assisted fixes estimated from kiro usage during fix commits
+      const aiAssistedFixes = Math.min(fixes.length, Math.ceil(kiroTokens / 5000));
+
+      incidentData.baseline = fixes.length > 0 ? `${fixes.length} fixes (manual)` : 'N/A';
+      incidentData.afterGenAI = aiAssistedFixes > 0 ? `${aiAssistedFixes} AI-assisted` : 'N/A';
+
+      if (aiAssistedFixes > 5) incidentData.score = 3;
+      else if (aiAssistedFixes > 2) incidentData.score = 2;
+      else if (aiAssistedFixes > 0) incidentData.score = 1;
+    } catch (e) { /* git not available */ }
+
+    // 4. Runbook Coverage — derive from documentation/steering/hook files generated
+    let runbookData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      const docFiles = execSync(
+        `git -C "${workspacePath}" log --diff-filter=A --name-only --since="4 weeks ago" --format=""`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const allNewFiles = docFiles ? docFiles.split('\n').filter(Boolean) : [];
+
+      // Operational docs: steering files, hooks, READMEs, runbooks, scripts
+      const opsDocPatterns = /\.(md|hook|sh|ps1)/i;
+      const opsPathPatterns = /(steering|hooks|scripts|docs|runbook|readme)/i;
+      const opsDocs = allNewFiles.filter(f => opsDocPatterns.test(f) || opsPathPatterns.test(f));
+
+      // Steering files = SOPs/runbooks
+      const steeringFiles = allNewFiles.filter(f => f.includes('steering'));
+      const hookFilesCount = allNewFiles.filter(f => f.includes('.hook'));
+
+      const totalOps = opsDocs.length;
+      runbookData.baseline = '0 runbooks';
+      runbookData.afterGenAI = `${totalOps} docs/SOPs generated`;
+
+      if (totalOps > 15) runbookData.score = 3;
+      else if (totalOps > 8) runbookData.score = 2;
+      else if (totalOps > 0) runbookData.score = 1;
+    } catch (e) { /* git not available */ }
+
+    const cicdMetrics = {
+      objective: 'Reduced friction across CI/CD and operations',
+      generatedAt: new Date().toISOString(),
+      derivedFrom: 'Git file patterns, Kiro hooks/steering, session data',
+      scoreCard: [
+        {
+          metric: 'CI/CD Config Generation',
+          whatItMeasures: 'Pipelines, IaC, scripts via AI',
+          howToCapture: 'Git file creation tracking',
+          signal: '↑ Automation',
+          baseline: cicdData.baseline,
+          afterGenAI: cicdData.afterGenAI,
+          score: cicdData.score,
+        },
+        {
+          metric: 'Deployment Readiness Time',
+          whatItMeasures: 'Build → Production readiness',
+          howToCapture: 'Commit velocity analytics',
+          signal: '↓ Time',
+          baseline: deployReadyData.baseline,
+          afterGenAI: deployReadyData.afterGenAI,
+          score: deployReadyData.score,
+        },
+        {
+          metric: 'Incident Resolution Support',
+          whatItMeasures: 'AI-assisted RCA, fixes',
+          howToCapture: 'Fix commits + Kiro token correlation',
+          signal: '↓ MTTR',
+          baseline: incidentData.baseline,
+          afterGenAI: incidentData.afterGenAI,
+          score: incidentData.score,
+        },
+        {
+          metric: 'Ops Runbook Coverage',
+          whatItMeasures: 'Auto-generated SOPs, docs',
+          howToCapture: 'Steering/hook/doc file tracking',
+          signal: '↑ Coverage',
+          baseline: runbookData.baseline,
+          afterGenAI: runbookData.afterGenAI,
+          score: runbookData.score,
+        },
+      ],
+    };
+
+    res.json(cicdMetrics);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`\n  ┌─────────────────────────────────────┐`);

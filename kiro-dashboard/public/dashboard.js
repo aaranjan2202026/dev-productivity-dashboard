@@ -234,6 +234,75 @@ function renderGenAI(data) {
     </p>`;
 }
 
+function renderCICD(data) {
+  const el = document.getElementById('cicd-content');
+  if (!el) return;
+  if (!data || !data.scoreCard) {
+    el.innerHTML = '<p class="empty-state">Unable to derive CI/CD metrics</p>';
+    return;
+  }
+
+  const scoreColors = ['score-0', 'score-1', 'score-2', 'score-3'];
+
+  let scoreRows = '';
+  for (const item of data.scoreCard) {
+    const signalClass = item.signal.includes('↑') ? 'signal-up' : 'signal-down';
+    scoreRows += `
+      <tr>
+        <td class="metric-name">${item.metric}</td>
+        <td>${item.baseline || 'N/A'}</td>
+        <td>${item.afterGenAI || 'N/A'}</td>
+        <td><span class="score-badge ${scoreColors[item.score]}">${item.score}</span></td>
+        <td><span class="${signalClass}">${item.signal}</span></td>
+      </tr>`;
+  }
+
+  let indicatorRows = '';
+  for (const item of data.scoreCard) {
+    const signalClass = item.signal.includes('↑') ? 'signal-up' : 'signal-down';
+    indicatorRows += `
+      <tr>
+        <td class="metric-name">${item.metric}</td>
+        <td>${item.whatItMeasures}</td>
+        <td>${item.howToCapture}</td>
+        <td><span class="${signalClass}">${item.signal}</span></td>
+      </tr>`;
+  }
+
+  const totalScore = data.scoreCard.reduce((sum, item) => sum + item.score, 0);
+  const maxScore = data.scoreCard.length * 3;
+
+  el.innerHTML = `
+    <div class="genai-objective">
+      <span class="objective-badge">Objective</span>
+      ${data.objective}
+      <span style="float:right;color:#58a6ff;font-weight:bold;">Overall: ${totalScore}/${maxScore}</span>
+    </div>
+    <div class="genai-source">
+      <small>&#128270; Derived from: ${data.derivedFrom}</small>
+    </div>
+
+    <h3 class="genai-section-title">Score Card</h3>
+    <table class="genai-table">
+      <thead>
+        <tr><th>Metric</th><th>Baseline</th><th>After GenAI</th><th>Score (0-3)</th><th>Signal</th></tr>
+      </thead>
+      <tbody>${scoreRows}</tbody>
+    </table>
+
+    <h3 class="genai-section-title">Indicators &amp; Description</h3>
+    <table class="genai-table">
+      <thead>
+        <tr><th>Metric</th><th>What It Measures</th><th>How to Capture</th><th>Signal</th></tr>
+      </thead>
+      <tbody>${indicatorRows}</tbody>
+    </table>
+
+    <p class="empty-state" style="margin-top:10px;font-size:11px;">
+      Updated: ${new Date(data.generatedAt).toLocaleTimeString()}
+    </p>`;
+}
+
 function renderConfig(data) {
   if (!data) return;
   document.getElementById('config-info').textContent = `Monitoring: ${data.careerToolkitPath} | Dev server: :${data.devServerPort} | Dashboard: :${data.dashboardPort}`;
@@ -241,7 +310,7 @@ function renderConfig(data) {
 
 async function refreshAll() {
   document.getElementById('refresh-indicator').textContent = 'refreshing...';
-  const [status, tokens, context, commands, git, config, productivity, genai] = await Promise.all([
+  const [status, tokens, context, commands, git, config, productivity, genai, cicd] = await Promise.all([
     fetchJSON('/api/status'),
     fetchJSON('/api/tokens'),
     fetchJSON('/api/context'),
@@ -250,6 +319,7 @@ async function refreshAll() {
     fetchJSON('/api/config'),
     fetchJSON('/api/productivity'),
     fetchJSON('/api/genai-activity'),
+    fetchJSON('/api/genai-cicd'),
   ]);
   renderAgentStatus(status);
   renderTokenUsage(tokens);
@@ -259,6 +329,7 @@ async function refreshAll() {
   renderConfig(config);
   renderProductivity(productivity);
   renderGenAI(genai);
+  renderCICD(cicd);
   document.getElementById('refresh-indicator').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
