@@ -215,3 +215,143 @@ footer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); text-alig
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* GenAI Developer Activity Panel */
+.genai-objective {
+  background: rgba(56, 139, 253, 0.1);
+  border: 1px solid #388bfd44;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #c9d1d9;
+}
+.objective-badge {
+  display: inline-block;
+  background: #388bfd;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+.genai-section-title {
+  color: #8b949e;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 16px 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #21262d;
+}
+.genai-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.genai-table thead tr {
+  background: #161b22;
+}
+.genai-table th {
+  color: #8b949e;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #30363d;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.genai-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #21262d;
+  color: #c9d1d9;
+  vertical-align: middle;
+}
+.genai-table tbody tr:hover {
+  background: rgba(56, 139, 253, 0.04);
+}
+.metric-name {
+  color: #58a6ff;
+  font-weight: 500;
+}
+.genai-input {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  padding: 5px 8px;
+  font-size: 12px;
+  width: 80px;
+}
+.genai-input.wide {
+  width: 160px;
+}
+.genai-input:focus {
+  border-color: #58a6ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+}
+.score-badge {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+}
+.score-badge.score-3 {
+  background: #238636;
+  color: #fff;
+}
+.score-badge.score-2 {
+  background: #9e6a03;
+  color: #fff;
+}
+.score-badge.score-1 {
+  background: #da3633;
+  color: #fff;
+}
+.score-badge.score-0 {
+  background: #484f58;
+  color: #fff;
+}
+.signal-up {
+  color: #3fb950;
+  font-weight: 600;
+}
+.signal-down {
+  color: #58a6ff;
+  font-weight: 600;
+}
+.save-btn {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.save-btn:hover {
+  background: #2ea043;
+}
+.save-status {
+  color: #3fb950;
+  font-size: 12px;
+  margin-left: 12px;
+}
+
+
+.genai-source {
+  color: #484f58;
+  margin-bottom: 12px;
+  font-size: 12px;
+}

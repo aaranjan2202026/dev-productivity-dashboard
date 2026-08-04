@@ -407,6 +407,178 @@ app.get('/api/productivity', (req, res) => {
   }
 });
 
+// GET /api/genai-activity - Derive GenAI developer activity from actual tracking data
+app.get('/api/genai-activity', (req, res) => {
+  try {
+    const data = loadData();
+    const workspacePath = CONFIG.careerToolkitPath;
+
+    // 1. Development Cycle Time — derive from git commit frequency
+    let cycleTimeData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      // Get commits from last 4 weeks
+      const recentLog = execSync(
+        `git -C "${workspacePath}" log --format="%ci" --since="4 weeks ago"`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const recentCommits = recentLog ? recentLog.split('\n').filter(Boolean) : [];
+
+      // Get commits from 4-8 weeks ago (baseline)
+      const olderLog = execSync(
+        `git -C "${workspacePath}" log --format="%ci" --since="8 weeks ago" --until="4 weeks ago"`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const olderCommits = olderLog ? olderLog.split('\n').filter(Boolean) : [];
+
+      const recentPerDay = recentCommits.length / 28;
+      const olderPerDay = olderCommits.length / 28;
+
+      cycleTimeData.baseline = olderCommits.length > 0 ? `${(7 / Math.max(olderPerDay, 0.1)).toFixed(1)}d/feature` : 'N/A';
+      cycleTimeData.afterGenAI = recentCommits.length > 0 ? `${(7 / Math.max(recentPerDay, 0.1)).toFixed(1)}d/feature` : 'N/A';
+
+      // Score: 3 if >50% faster, 2 if >25% faster, 1 if any improvement
+      if (olderPerDay > 0 && recentPerDay > olderPerDay) {
+        const improvement = (recentPerDay - olderPerDay) / olderPerDay;
+        cycleTimeData.score = improvement > 0.5 ? 3 : improvement > 0.25 ? 2 : 1;
+      } else if (recentCommits.length > 0) {
+        cycleTimeData.score = 2; // Default if no baseline
+      }
+    } catch (e) { /* git not available */ }
+
+    // 2. Code Generation Support — derive from Kiro token usage and session activity
+    let codeGenData = { baseline: '0%', afterGenAI: '0%', score: 0 };
+    const kiroTokens = (data.tokenUsage && data.tokenUsage.kiro) || 0;
+    const totalTokens = Object.values(data.tokenUsage || {}).reduce((a, b) => a + b, 0);
+    const sessionCount = (data.sessions || []).length;
+
+    if (kiroTokens > 0) {
+      // Estimate % of code assisted by AI based on token usage patterns
+      const aiAssistPct = Math.min(Math.round((kiroTokens / Math.max(totalTokens, 1)) * 80), 95);
+      codeGenData.baseline = '0%';
+      codeGenData.afterGenAI = `${aiAssistPct}%`;
+      codeGenData.score = aiAssistPct > 60 ? 3 : aiAssistPct > 30 ? 2 : 1;
+    }
+
+    // 3. Throughput per Sprint — derive from lines of code and commits in recent period
+    let throughputData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      // Recent 2 weeks
+      const recentStats = execSync(
+        `git -C "${workspacePath}" log --shortstat --since="2 weeks ago" --format=""`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      let recentInsertions = 0;
+      for (const line of recentStats.split('\n')) {
+        const match = line.match(/(\d+) insertion/);
+        if (match) recentInsertions += parseInt(match[1]);
+      }
+
+      // Older 2 weeks (baseline)
+      const olderStats = execSync(
+        `git -C "${workspacePath}" log --shortstat --since="4 weeks ago" --until="2 weeks ago" --format=""`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      let olderInsertions = 0;
+      for (const line of olderStats.split('\n')) {
+        const match = line.match(/(\d+) insertion/);
+        if (match) olderInsertions += parseInt(match[1]);
+      }
+
+      throughputData.baseline = olderInsertions > 0 ? `${olderInsertions} LOC` : 'N/A';
+      throughputData.afterGenAI = recentInsertions > 0 ? `${recentInsertions} LOC` : 'N/A';
+
+      if (olderInsertions > 0 && recentInsertions > olderInsertions) {
+        const improvement = (recentInsertions - olderInsertions) / olderInsertions;
+        throughputData.score = improvement > 0.5 ? 3 : improvement > 0.25 ? 2 : 1;
+      } else if (recentInsertions > 0) {
+        throughputData.score = 1;
+      }
+    } catch (e) { /* git not available */ }
+
+    // 4. Boilerplate Effort Reduction — derive from file generation patterns
+    let boilerplateData = { baseline: null, afterGenAI: null, score: 0 };
+    try {
+      // Count config/infra files created recently (proxy for boilerplate generation)
+      const recentFiles = execSync(
+        `git -C "${workspacePath}" log --diff-filter=A --name-only --since="2 weeks ago" --format=""`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      const newFiles = recentFiles ? recentFiles.split('\n').filter(Boolean) : [];
+
+      // Categorize boilerplate files
+      const boilerplatePatterns = /\.(json|yaml|yml|toml|config|env|hook|md|dockerfile|tf|cdk)/i;
+      const boilerplateFiles = newFiles.filter(f => boilerplatePatterns.test(f));
+      const totalNewFiles = newFiles.length;
+
+      const hoursSaved = boilerplateFiles.length * 0.5; // Estimate 30min per boilerplate file
+      boilerplateData.baseline = `${(boilerplateFiles.length * 1.5).toFixed(1)}h manual`;
+      boilerplateData.afterGenAI = `${hoursSaved.toFixed(1)}h with AI`;
+
+      if (boilerplateFiles.length > 10) {
+        boilerplateData.score = 3;
+      } else if (boilerplateFiles.length > 5) {
+        boilerplateData.score = 2;
+      } else if (boilerplateFiles.length > 0) {
+        boilerplateData.score = 1;
+      }
+    } catch (e) { /* git not available */ }
+
+    // Build response
+    const genaiMetrics = {
+      objective: 'Accelerated development with consistent quality',
+      generatedAt: new Date().toISOString(),
+      derivedFrom: 'Git history, Kiro token usage, session tracking',
+      scoreCard: [
+        {
+          metric: 'Development Cycle Time',
+          whatItMeasures: 'Story start → code complete',
+          howToCapture: 'Git commit frequency',
+          signal: '↓ Cycle Time',
+          baseline: cycleTimeData.baseline,
+          afterGenAI: cycleTimeData.afterGenAI,
+          score: cycleTimeData.score,
+        },
+        {
+          metric: 'Code Generation Support',
+          whatItMeasures: '% of code snippets generated/refined by Kiro',
+          howToCapture: 'Kiro token & session tracking',
+          signal: '↑ AI Use',
+          baseline: codeGenData.baseline,
+          afterGenAI: codeGenData.afterGenAI,
+          score: codeGenData.score,
+        },
+        {
+          metric: 'Throughput per Sprint',
+          whatItMeasures: 'Lines/modules delivered per sprint',
+          howToCapture: 'Git repo analytics',
+          signal: '↑ Throughput',
+          baseline: throughputData.baseline,
+          afterGenAI: throughputData.afterGenAI,
+          score: throughputData.score,
+        },
+        {
+          metric: 'Boilerplate Effort Reduction',
+          whatItMeasures: 'Infra, API, config, DTO generation',
+          howToCapture: 'File creation patterns in git',
+          signal: '↓ Effort',
+          baseline: boilerplateData.baseline,
+          afterGenAI: boilerplateData.afterGenAI,
+          score: boilerplateData.score,
+        },
+      ],
+      rawData: {
+        kiroTokens,
+        totalTokens,
+        sessionCount,
+      },
+    };
+
+    res.json(genaiMetrics);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`\n  ┌─────────────────────────────────────┐`);
