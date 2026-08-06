@@ -119,6 +119,24 @@
         </div>
       </div>
     </section>
+
+    <!-- Work Item Tracking Panel -->
+    <section class="panel panel-wide" aria-labelledby="workitems-heading">
+      <h2 id="workitems-heading">Work Item Tracking</h2>
+      <div class="panel-content" id="workitems-panel">
+        <!-- Add Work Item Form -->
+        <div class="workitem-form">
+          <input type="text" id="workitem-id" class="workitem-input" placeholder="JIRA ID / Work Identifier (e.g. PROJ-123)">
+          <input type="text" id="workitem-desc" class="workitem-input wide" placeholder="Description (optional)">
+          <button id="workitem-start-btn" class="workitem-btn start">Start Tracking</button>
+          <button id="workitem-complete-btn" class="workitem-btn complete" disabled>Mark Complete</button>
+        </div>
+        <!-- Work Items Table -->
+        <div id="workitems-content">
+          <p class="empty-state">No work items tracked yet</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>

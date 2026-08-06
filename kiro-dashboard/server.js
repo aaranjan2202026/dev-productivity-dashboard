@@ -422,6 +422,149 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// --- Work Item Tracking ---
+
+// GET /api/workitems - List all work items
+app.get('/api/workitems', (req, res) => {
+  try {
+    const data = loadData();
+    const workItems = data.workItems || [];
+    
+    // Calculate summary stats
+    const completed = workItems.filter(w => w.status === 'completed');
+    const inProgress = workItems.filter(w => w.status === 'in-progress');
+    const totalHours = completed.reduce((sum, w) => sum + (w.durationHours || 0), 0);
+    const avgHours = completed.length > 0 ? totalHours / completed.length : 0;
+
+    res.json({
+      workItems,
+      summary: {
+        total: workItems.length,
+        completed: completed.length,
+        inProgress: inProgress.length,
+        totalHoursSpent: Math.round(totalHours * 100) / 100,
+        avgCompletionHours: Math.round(avgHours * 100) / 100,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/workitems/start - Start tracking a work item
+app.post('/api/workitems/start', (req, res) => {
+  try {
+    const { jiraId, description } = req.body;
+    if (!jiraId) {
+      return res.status(400).json({ error: 'jiraId is required' });
+    }
+    const data = loadData();
+    if (!data.workItems) data.workItems = [];
+
+    // Check if already tracking this item
+    const existing = data.workItems.find(w => w.jiraId === jiraId && w.status === 'in-progress');
+    if (existing) {
+      return res.json({ message: `Already tracking ${jiraId}`, workItem: existing });
+    }
+
+    const workItem = {
+      jiraId,
+      description: description || '',
+      status: 'in-progress',
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      durationHours: null,
+      codeGenerated: false,
+      filesChanged: 0,
+      linesChanged: 0,
+    };
+
+    data.workItems.push(workItem);
+    saveData(data);
+    res.json({ message: `Started tracking ${jiraId}`, workItem });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/workitems/complete - Mark a work item as complete
+app.post('/api/workitems/complete', (req, res) => {
+  try {
+    const { jiraId } = req.body;
+    if (!jiraId) {
+      return res.status(400).json({ error: 'jiraId is required' });
+    }
+    const data = loadData();
+    if (!data.workItems) data.workItems = [];
+
+    const item = data.workItems.find(w => w.jiraId === jiraId && w.status === 'in-progress');
+    if (!item) {
+      return res.status(404).json({ error: `No in-progress item found for ${jiraId}` });
+    }
+
+    const now = new Date();
+    const startTime = new Date(item.startedAt);
+    const durationMs = now - startTime;
+    const durationHours = durationMs / (1000 * 60 * 60);
+
+    item.status = 'completed';
+    item.completedAt = now.toISOString();
+    item.durationHours = Math.round(durationHours * 100) / 100;
+
+    // Check git for changes since start time
+    try {
+      const gitLog = execSync(
+        `git -C "${CONFIG.careerToolkitPath}" log --shortstat --since="${item.startedAt}" --format=""`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim();
+      let filesChanged = 0;
+      let linesChanged = 0;
+      for (const line of gitLog.split('\n')) {
+        const filesMatch = line.match(/(\d+) file/);
+        const insertMatch = line.match(/(\d+) insertion/);
+        const deleteMatch = line.match(/(\d+) deletion/);
+        if (filesMatch) filesChanged += parseInt(filesMatch[1]);
+        if (insertMatch) linesChanged += parseInt(insertMatch[1]);
+        if (deleteMatch) linesChanged += parseInt(deleteMatch[1]);
+      }
+      item.filesChanged = filesChanged;
+      item.linesChanged = linesChanged;
+      item.codeGenerated = linesChanged > 0;
+    } catch (e) { /* git not available */ }
+
+    saveData(data);
+    res.json({ message: `Completed ${jiraId} in ${item.durationHours}h`, workItem: item });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/workitems/update - Update code generation info for a work item
+app.post('/api/workitems/update', (req, res) => {
+  try {
+    const { jiraId, codeGenerated, filesChanged, linesChanged } = req.body;
+    if (!jiraId) {
+      return res.status(400).json({ error: 'jiraId is required' });
+    }
+    const data = loadData();
+    if (!data.workItems) data.workItems = [];
+
+    const item = data.workItems.find(w => w.jiraId === jiraId);
+    if (!item) {
+      return res.status(404).json({ error: `Work item ${jiraId} not found` });
+    }
+
+    if (codeGenerated !== undefined) item.codeGenerated = codeGenerated;
+    if (filesChanged !== undefined) item.filesChanged = filesChanged;
+    if (linesChanged !== undefined) item.linesChanged = linesChanged;
+
+    saveData(data);
+    res.json({ message: `Updated ${jiraId}`, workItem: item });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/productivity - Return latest productivity metrics from reports
 app.get('/api/productivity', (req, res) => {
   try {

@@ -374,9 +374,104 @@ function renderConfig(data) {
   document.getElementById('config-info').textContent = `Monitoring: ${data.careerToolkitPath} | Dev server: :${data.devServerPort} | Dashboard: :${data.dashboardPort}`;
 }
 
+function renderWorkItems(data) {
+  const el = document.getElementById('workitems-content');
+  if (!el) return;
+  if (!data || !data.workItems || data.workItems.length === 0) {
+    el.innerHTML = '<p class="empty-state">No work items tracked yet. Enter a JIRA ID above and click Start Tracking.</p>';
+    return;
+  }
+
+  const { workItems, summary } = data;
+
+  // Summary stats
+  let html = `
+    <div class="workitem-summary">
+      <div class="workitem-stat"><span class="workitem-stat-value">${summary.completed}</span><span class="workitem-stat-label">Completed</span></div>
+      <div class="workitem-stat"><span class="workitem-stat-value">${summary.inProgress}</span><span class="workitem-stat-label">In Progress</span></div>
+      <div class="workitem-stat"><span class="workitem-stat-value">${summary.avgCompletionHours}h</span><span class="workitem-stat-label">Avg Time</span></div>
+      <div class="workitem-stat"><span class="workitem-stat-value">${summary.totalHoursSpent}h</span><span class="workitem-stat-label">Total Hours</span></div>
+    </div>`;
+
+  // Work items table
+  const sorted = [...workItems].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+  html += `
+    <table class="workitem-table">
+      <thead>
+        <tr>
+          <th>JIRA ID</th>
+          <th>Status</th>
+          <th>Kiro Code</th>
+          <th>Lines Changed</th>
+          <th>Time Taken</th>
+          <th>Started</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  for (const item of sorted.slice(0, 20)) {
+    const statusClass = item.status === 'completed' ? 'completed' : 'in-progress';
+    const statusIcon = item.status === 'completed' ? '&#10003;' : '&#9679;';
+    const codeLabel = item.codeGenerated ? '<span class="badge-yes">AI Generated</span>' : '<span class="badge-no">Manual</span>';
+    const duration = item.durationHours !== null ? `${item.durationHours}h` : '<em>running...</em>';
+    const startDate = new Date(item.startedAt).toLocaleDateString();
+
+    html += `
+      <tr>
+        <td class="workitem-id-cell">${item.jiraId}</td>
+        <td><span class="workitem-status ${statusClass}">${statusIcon} ${item.status}</span></td>
+        <td>${codeLabel}</td>
+        <td>${item.linesChanged || 0}</td>
+        <td><strong>${duration}</strong></td>
+        <td>${startDate}</td>
+      </tr>`;
+  }
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// Work item form handlers
+function initWorkItemForm() {
+  const startBtn = document.getElementById('workitem-start-btn');
+  const completeBtn = document.getElementById('workitem-complete-btn');
+  const idInput = document.getElementById('workitem-id');
+
+  if (!startBtn) return;
+
+  startBtn.addEventListener('click', async () => {
+    const jiraId = idInput.value.trim();
+    const desc = document.getElementById('workitem-desc').value.trim();
+    if (!jiraId) { idInput.focus(); return; }
+
+    await fetch(API_BASE + '/api/workitems/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jiraId, description: desc }),
+    });
+    completeBtn.disabled = false;
+    refreshAll();
+  });
+
+  completeBtn.addEventListener('click', async () => {
+    const jiraId = idInput.value.trim();
+    if (!jiraId) { idInput.focus(); return; }
+
+    await fetch(API_BASE + '/api/workitems/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jiraId }),
+    });
+    idInput.value = '';
+    document.getElementById('workitem-desc').value = '';
+    completeBtn.disabled = true;
+    refreshAll();
+  });
+}
+
 async function refreshAll() {
   document.getElementById('refresh-indicator').textContent = 'refreshing...';
-  const [status, tokens, context, commands, git, config, productivity, genai, cicd] = await Promise.all([
+  const [status, tokens, context, commands, git, config, productivity, genai, cicd, workitems] = await Promise.all([
     fetchJSON('/api/status'),
     fetchJSON('/api/tokens'),
     fetchJSON('/api/context'),
@@ -386,6 +481,7 @@ async function refreshAll() {
     fetchJSON('/api/productivity'),
     fetchJSON('/api/genai-activity'),
     fetchJSON('/api/genai-cicd'),
+    fetchJSON('/api/workitems'),
   ]);
   renderAgentStatus(status);
   renderTokenUsage(tokens);
@@ -396,11 +492,13 @@ async function refreshAll() {
   renderProductivity(productivity);
   renderGenAI(genai);
   renderCICD(cicd);
+  renderWorkItems(workitems);
   document.getElementById('refresh-indicator').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   refreshAll();
+  initWorkItemForm();
   refreshTimer = setInterval(refreshAll, REFRESH_INTERVAL);
   document.getElementById('refresh-btn').addEventListener('click', () => {
     clearInterval(refreshTimer);
