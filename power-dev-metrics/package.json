@@ -1,0 +1,25 @@
+{
+  "name": "power-dev-metrics",
+  "version": "1.0.0",
+  "description": "Kiro Power: Developer Productivity & Cost Metrics MCP Server",
+  "main": "mcp-server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node mcp-server.js",
+    "dashboard": "node ../kiro-dashboard/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "keywords": [
+    "kiro",
+    "power",
+    "mcp",
+    "metrics",
+    "productivity",
+    "dashboard"
+  ],
+  "author": "aaranjan2202026",
+  "license": "MIT"
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "dev-metrics": {
+      "command": "node",
+      "args": ["mcp-server.js"],
+      "env": {
+        "PERSONAL_GITHUB_TOKEN": "${PERSONAL_GITHUB_TOKEN}",
+        "TEAMS_WEBHOOK_URL": "${TEAMS_WEBHOOK_URL}",
+        "DASHBOARD_PORT": "3001"
+      }
+    }
+  }
+}
