@@ -124,26 +124,19 @@ function renderContextUsage(data) {
 
   let html = '';
 
-  // Daily / Weekly / Monthly summary cards
+  // Daily / Weekly / Monthly table
   if (summary) {
     html += `
-      <div class="context-period-grid">
-        <div class="context-period-card">
-          <span class="context-period-value">${fmt(summary.daily.tokens)}</span>
-          <span class="context-period-label">Today</span>
-          <span class="context-period-sessions">${summary.daily.sessions} sessions</span>
-        </div>
-        <div class="context-period-card">
-          <span class="context-period-value">${fmt(summary.weekly.tokens)}</span>
-          <span class="context-period-label">This Week</span>
-          <span class="context-period-sessions">${summary.weekly.sessions} sessions</span>
-        </div>
-        <div class="context-period-card">
-          <span class="context-period-value">${fmt(summary.monthly.tokens)}</span>
-          <span class="context-period-label">This Month</span>
-          <span class="context-period-sessions">${summary.monthly.sessions} sessions</span>
-        </div>
-      </div>`;
+      <table class="context-table">
+        <thead>
+          <tr><th>Period</th><th>Tokens</th><th>Sessions</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Today</td><td>${fmt(summary.daily.tokens)}</td><td>${summary.daily.sessions}</td></tr>
+          <tr><td>This Week</td><td>${fmt(summary.weekly.tokens)}</td><td>${summary.weekly.sessions}</td></tr>
+          <tr><td>This Month</td><td>${fmt(summary.monthly.tokens)}</td><td>${summary.monthly.sessions}</td></tr>
+        </tbody>
+      </table>`;
   }
 
   // Active sessions list

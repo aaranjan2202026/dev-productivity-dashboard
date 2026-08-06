@@ -450,3 +450,33 @@ footer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); text-alig
   padding-top: 8px;
   border-top: 1px solid #21262d;
 }
+
+
+/* Context Usage Table */
+.context-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.context-table thead tr {
+  background: rgba(0, 0, 0, 0.3);
+}
+.context-table th {
+  color: #8b949e;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #30363d;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.context-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #21262d;
+  color: #c9d1d9;
+}
+.context-table tbody tr:hover {
+  background: rgba(56, 139, 253, 0.04);
+}
