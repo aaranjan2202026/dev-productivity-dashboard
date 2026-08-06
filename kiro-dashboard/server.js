@@ -289,8 +289,13 @@ app.get('/api/commands', (req, res) => {
 app.get('/api/tokens', (req, res) => {
   try {
     const data = loadData();
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
     res.json({
       tokenUsage: data.tokenUsage,
+      monthlyLimit: data.monthlyLimit || 200000,
+      monthStartDate: monthStart,
       updatedAt: data.tokenUsageUpdatedAt || null,
     });
   } catch (e) {

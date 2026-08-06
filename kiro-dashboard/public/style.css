@@ -355,3 +355,53 @@ footer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); text-alig
   margin-bottom: 12px;
   font-size: 12px;
 }
+
+
+/* Token Usage - Monthly Summary */
+.token-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.token-summary-item {
+  text-align: center;
+  flex: 1;
+}
+.token-summary-value {
+  display: block;
+  font-size: 22px;
+  font-weight: bold;
+  color: #58a6ff;
+}
+.token-summary-label {
+  display: block;
+  font-size: 10px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.token-month-bar {
+  width: 100%;
+  height: 8px;
+  background: #21262d;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.token-month-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.token-month-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 8px;
+}
+.token-divider {
+  border-top: 1px solid #21262d;
+  margin: 12px 0;
+}

@@ -59,16 +59,57 @@ function renderAgentStatus(data) {
 function renderTokenUsage(data) {
   if (!data) return;
   const el = document.getElementById('token-bars');
-  const { tokenUsage } = data;
+  const { tokenUsage, monthlyLimit, monthStartDate } = data;
   if (!tokenUsage || Object.keys(tokenUsage).length === 0) {
     el.innerHTML = '<p class="empty-state">No token data yet</p>';
     return;
   }
+
+  const limit = monthlyLimit || 200000; // Default monthly token limit
+  const totalUsed = Object.values(tokenUsage).reduce((a, b) => a + b, 0);
+  const tokensLeft = Math.max(limit - totalUsed, 0);
+  const usagePct = Math.min((totalUsed / limit) * 100, 100);
+  const leftPct = 100 - usagePct;
+
+  // Color based on usage level
+  let usageColor = '#3fb950'; // green
+  if (usagePct > 80) usageColor = '#da3633'; // red
+  else if (usagePct > 60) usageColor = '#d29922'; // yellow
+
+  // Monthly summary header
+  let html = `
+    <div class="token-summary">
+      <div class="token-summary-item">
+        <span class="token-summary-value" style="color:${usageColor}">${fmt(totalUsed)}</span>
+        <span class="token-summary-label">Used this month</span>
+      </div>
+      <div class="token-summary-item">
+        <span class="token-summary-value" style="color:#3fb950">${fmt(tokensLeft)}</span>
+        <span class="token-summary-label">Tokens left</span>
+      </div>
+      <div class="token-summary-item">
+        <span class="token-summary-value">${fmt(limit)}</span>
+        <span class="token-summary-label">Monthly limit</span>
+      </div>
+    </div>
+    <div class="token-month-bar">
+      <div class="token-month-bar-fill" style="width:${usagePct}%;background:${usageColor}"></div>
+    </div>
+    <div class="token-month-meta">
+      <span>${usagePct.toFixed(1)}% used</span>
+      <span>${leftPct.toFixed(1)}% remaining</span>
+    </div>
+    <div class="token-divider"></div>`;
+
+  // Per-agent breakdown
   const max = Math.max(...Object.values(tokenUsage), 1);
-  el.innerHTML = Object.entries(tokenUsage).map(([agent, tokens]) => {
+  html += Object.entries(tokenUsage).map(([agent, tokens]) => {
     const pct = Math.min((tokens / max) * 100, 100);
-    return `<div class="token-row"><div class="token-label"><strong>${agent}</strong><span>${fmt(tokens)} tokens</span></div><div class="token-bar"><div class="token-bar-fill ${agent}" style="width:${pct}%"></div></div></div>`;
+    const agentPctOfTotal = ((tokens / limit) * 100).toFixed(1);
+    return `<div class="token-row"><div class="token-label"><strong>${agent}</strong><span>${fmt(tokens)} tokens (${agentPctOfTotal}%)</span></div><div class="token-bar"><div class="token-bar-fill ${agent}" style="width:${pct}%"></div></div></div>`;
   }).join('');
+
+  el.innerHTML = html;
 }
 
 function renderContextUsage(data) {
