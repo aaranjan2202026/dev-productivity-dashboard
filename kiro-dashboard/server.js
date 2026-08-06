@@ -321,12 +321,53 @@ app.post('/api/tokens', (req, res) => {
   }
 });
 
-// GET /api/context - Context usage per session
+// GET /api/context - Context usage per session with daily/weekly/monthly aggregation
 app.get('/api/context', (req, res) => {
   try {
     const data = loadData();
+    const sessions = data.sessions || [];
+    const now = new Date();
+
+    // Calculate time boundaries
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of week (Sunday)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Aggregate context tokens by period
+    let dailyTokens = 0;
+    let weeklyTokens = 0;
+    let monthlyTokens = 0;
+    let dailySessions = 0;
+    let weeklySessions = 0;
+    let monthlySessions = 0;
+
+    for (const s of sessions) {
+      const sessionDate = new Date(s.updatedAt);
+      const tokens = s.contextTokens || 0;
+
+      if (sessionDate >= monthStart) {
+        monthlyTokens += tokens;
+        monthlySessions++;
+      }
+      if (sessionDate >= weekStart) {
+        weeklyTokens += tokens;
+        weeklySessions++;
+      }
+      if (sessionDate >= todayStart) {
+        dailyTokens += tokens;
+        dailySessions++;
+      }
+    }
+
     res.json({
-      sessions: data.sessions || [],
+      sessions,
+      summary: {
+        daily: { tokens: dailyTokens, sessions: dailySessions },
+        weekly: { tokens: weeklyTokens, sessions: weeklySessions },
+        monthly: { tokens: monthlyTokens, sessions: monthlySessions },
+      },
+      totalSessions: sessions.length,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

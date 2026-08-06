@@ -405,3 +405,48 @@ footer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); text-alig
   border-top: 1px solid #21262d;
   margin: 12px 0;
 }
+
+
+/* Context Usage - Daily/Weekly/Monthly */
+.context-period-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.context-period-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.context-period-value {
+  display: block;
+  font-size: 20px;
+  font-weight: bold;
+  color: #58a6ff;
+}
+.context-period-label {
+  display: block;
+  font-size: 10px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.context-period-sessions {
+  display: block;
+  font-size: 10px;
+  color: #484f58;
+  margin-top: 4px;
+}
+.context-sessions-title {
+  font-size: 11px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #21262d;
+}

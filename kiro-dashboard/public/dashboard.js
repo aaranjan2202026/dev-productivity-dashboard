@@ -115,18 +115,50 @@ function renderTokenUsage(data) {
 function renderContextUsage(data) {
   if (!data) return;
   const el = document.getElementById('context-list');
-  const { sessions } = data;
-  if (!sessions || sessions.length === 0) {
+  const { sessions, summary } = data;
+
+  if ((!sessions || sessions.length === 0) && !summary) {
     el.innerHTML = '<p class="empty-state">No active sessions</p>';
     return;
   }
-  const sorted = [...sessions].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  const circ = 2 * Math.PI * 16;
-  el.innerHTML = sorted.slice(0, 5).map(s => {
-    const pct = Math.round((s.contextTokens / s.maxTokens) * 100);
-    const off = circ - (pct / 100) * circ;
-    return `<div class="context-item"><div class="context-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16"/><circle class="fg" cx="20" cy="20" r="16" stroke-dasharray="${circ}" stroke-dashoffset="${off}"/></svg><span class="context-percent">${pct}%</span></div><div class="context-info"><strong>${s.agent}</strong><span>${fmt(s.contextTokens)} / ${fmt(s.maxTokens)} tokens</span><span>${s.description || s.sessionId}</span></div></div>`;
-  }).join('');
+
+  let html = '';
+
+  // Daily / Weekly / Monthly summary cards
+  if (summary) {
+    html += `
+      <div class="context-period-grid">
+        <div class="context-period-card">
+          <span class="context-period-value">${fmt(summary.daily.tokens)}</span>
+          <span class="context-period-label">Today</span>
+          <span class="context-period-sessions">${summary.daily.sessions} sessions</span>
+        </div>
+        <div class="context-period-card">
+          <span class="context-period-value">${fmt(summary.weekly.tokens)}</span>
+          <span class="context-period-label">This Week</span>
+          <span class="context-period-sessions">${summary.weekly.sessions} sessions</span>
+        </div>
+        <div class="context-period-card">
+          <span class="context-period-value">${fmt(summary.monthly.tokens)}</span>
+          <span class="context-period-label">This Month</span>
+          <span class="context-period-sessions">${summary.monthly.sessions} sessions</span>
+        </div>
+      </div>`;
+  }
+
+  // Active sessions list
+  if (sessions && sessions.length > 0) {
+    const sorted = [...sessions].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    const circ = 2 * Math.PI * 16;
+    html += '<div class="context-sessions-title">Recent Sessions</div>';
+    html += sorted.slice(0, 5).map(s => {
+      const pct = Math.round((s.contextTokens / s.maxTokens) * 100);
+      const off = circ - (pct / 100) * circ;
+      return `<div class="context-item"><div class="context-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16"/><circle class="fg" cx="20" cy="20" r="16" stroke-dasharray="${circ}" stroke-dashoffset="${off}"/></svg><span class="context-percent">${pct}%</span></div><div class="context-info"><strong>${s.agent}</strong><span>${fmt(s.contextTokens)} / ${fmt(s.maxTokens)} tokens</span><span>${s.description || s.sessionId}</span></div></div>`;
+    }).join('');
+  }
+
+  el.innerHTML = html;
 }
 
 
